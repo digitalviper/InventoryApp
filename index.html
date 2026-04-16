@@ -64,7 +64,7 @@
                 <div onclick="showUserDetailsModal()" class="flex items-center gap-x-3 cursor-pointer hover:bg-slate-100 px-3 py-1 rounded-3xl transition-colors">
                     <div class="text-right">
                         <div class="text-sm font-semibold" id="currentUserDisplay">Test User</div>
-                        <div class="text-xs text-slate-500">Madison, WI</div>
+                        <div class="text-xs text-slate-500">City, State</div>
                     </div>
                     <div id="userAvatar" class="w-8 h-8 bg-amber-200 text-amber-800 rounded-2xl flex items-center justify-center font-bold">JW</div>
                 </div>
@@ -390,10 +390,10 @@ let lookups = {
     makes: ["Apple","Cisco","Dell","HP","Lenovo"],
     categories: ["Desktop","Laptop","Monitor","Printer","Server","Switch"],
     models: [{make: "Apple", name: "MacBook Pro"},{make: "Dell", name: "Latitude 7490"},{make: "Dell", name: "XPS 15"},{make: "HP", name: "EliteBook 840"},{make: "Lenovo", name: "ThinkPad X1"}],
-    sites: ["FDL"],
-    buildings: [{site: "FDL", name: "A"},{site: "FDL", name: "B"}],
+    sites: ["Site 1"],
+    buildings: [{site: "Site 1", name: "A"},{site: "Site 1", name: "B"}],
     rooms: [{building: "A", name: "A203"},{building: "A", name: "A206"},{building: "A", name: "A207"},{building: "A", name: "L137"},{building: "B", name: "B104"}],
-    users: [{name: "Test User", jobTitle: "AV Technician", site: "FDL", building: "B", room: "B104"},{name: "Test User 4", jobTitle: "Senior Engineer", site: "FDL", building: "B", room: "B104"},{name: "Test User 2", jobTitle: "AV Technology Manager", site: "FDL", building: "A", room: "A203"},{name: "Test User 3", jobTitle: "AV Specialist", site: "FDL", building: "A", room: "A206"}]
+    users: [{name: "Test User", jobTitle: "AV Technician", site: "Site 1", building: "B", room: "B104"},{name: "Test User 4", jobTitle: "Senior Engineer", site: "Site 1", building: "B", room: "B104"},{name: "Test User 2", jobTitle: "AV Technology Manager", site: "Site 1", building: "A", room: "A203"},{name: "Test User 3", jobTitle: "AV Specialist", site: "Site 1", building: "A", room: "A206"}]
 };
 let currentUserIndex = 0;
 let currentEditId = null;
@@ -448,17 +448,17 @@ function loadData() {
         if (data.currentUserIndex !== undefined) currentUserIndex = data.currentUserIndex;
     } else {
         assets = [
-            {id: "AF-2026-0001", make: "Dell", categories: ["Laptop"], model: "XPS 15", serial: "8F9K2L3M4N", mac1: "00:1A:2B:3C:4D:5E", mac2: "AA:BB:CC:DD:EE:FF", site: "FDL", building: "B", room: "B104", position: "Desk 12", note: "Primary engineering laptop", status: "Active", addedBy: "Test User", addedOn: "2026-04-10T09:15:00.000Z", lastUpdatedBy: "Test User", lastUpdatedOn: "2026-04-12T14:30:00.000Z"},
-            {id: "AF-2026-0002", make: "HP", categories: ["Server"], model: "ProLiant DL380", serial: "P9X7Q2R4T6", mac1: "11:22:33:44:55:66", mac2: "", site: "FDL", building: "B", room: "B104", position: "Rack 12U", note: "", status: "Maintenance", addedBy: "Test User", addedOn: "2026-04-08T11:45:00.000Z", lastUpdatedBy: "Test User", lastUpdatedOn: "2026-04-14T08:00:00.000Z"}
+            {id: "AF-2026-0001", make: "Dell", categories: ["Laptop"], model: "XPS 15", serial: "8F9K2L3M4N", mac1: "00:1A:2B:3C:4D:5E", mac2: "AA:BB:CC:DD:EE:FF", site: "Site 1", building: "B", room: "B104", position: "Desk 12", note: "Primary engineering laptop", status: "Active", addedBy: "Test User", addedOn: "2026-04-10T09:15:00.000Z", lastUpdatedBy: "Test User", lastUpdatedOn: "2026-04-12T14:30:00.000Z"},
+            {id: "AF-2026-0002", make: "HP", categories: ["Server"], model: "ProLiant DL380", serial: "P9X7Q2R4T6", mac1: "11:22:33:44:55:66", mac2: "", site: "Site 1", building: "B", room: "B104", position: "Rack 12U", note: "", status: "Maintenance", addedBy: "Test User", addedOn: "2026-04-08T11:45:00.000Z", lastUpdatedBy: "Test User", lastUpdatedOn: "2026-04-14T08:00:00.000Z"}
         ];
         saveData();
     }
     if (!lookups.users || !Array.isArray(lookups.users) || lookups.users.length === 0) {
         lookups.users = [
-            {name: "Test User", jobTitle: "AV Technician", site: "FDL", building: "B", room: "B104"},
-            {name: "Test User 4", jobTitle: "Senior Engineer", site: "FDL", building: "B", room: "B104"},
-            {name: "Test User 2", jobTitle: "AV Technology Manager", site: "FDL", building: "A", room: "A203"},
-            {name: "Test User 3", jobTitle: "AV Specialist", site: "FDL", building: "A", room: "A206"}
+            {name: "Test User", jobTitle: "AV Technician", site: "Site 1", building: "B", room: "B104"},
+            {name: "Test User 4", jobTitle: "Senior Engineer", site: "Site 1", building: "B", room: "B104"},
+            {name: "Test User 2", jobTitle: "AV Technology Manager", site: "Site 1", building: "A", room: "A203"},
+            {name: "Test User 3", jobTitle: "AV Specialist", site: "Site 1", building: "A", room: "A206"}
         ];
         currentUserIndex = 0;
     }
