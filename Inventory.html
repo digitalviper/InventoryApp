@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Technology • Inventory Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.0/html5-qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        :root { --tw-color-primary: #0ea5e9; }
+        * { font-family: 'Inter', system_ui, sans-serif; }
+        .modal { animation: modalPop 0.3s ease-out; }
+        @keyframes modalPop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .table-row:hover { background-color: #f8fafc; }
+        .data-table th { cursor: pointer; user-select: none; }
+        .status-active { background-color: #10b981; color: white; }
+        .status-maintenance { background-color: #f59e0b; color: white; }
+        .status-inactive { background-color: #64748b; color: white; }
+        .status-removed { background-color: #ef4444; color: white; }
+        .modal-header { cursor: grab; user-select: none; }
+        .modal-header:active { cursor: grabbing; }
+        .form-scroll { max-height: 65vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #0ea5e9 #f1f5f9; }
+        #tableContainer { max-height: calc(100vh - 220px); overflow: auto; scrollbar-width: thin; scrollbar-color: #0ea5e9 #f1f5f9; }
+        #tableContainer table { min-width: 1400px; }
+        #tableContainer thead { position: sticky; top: 0; z-index: 10; background-color: #f8fafc; }
+        .tag { background-color: #e0f2fe; color: #0369a1; }
+        .lookup-list { max-height: 420px; overflow-y: auto; }
+        #scannerContainer { width: 100%; max-width: 640px; margin: 0 auto; border-radius: 24px; overflow: hidden; }
+        .dark body { background-color: #0f172a; color: #f1f5f9; }
+        .dark .bg-white { background-color: #1e2937; }
+        .dark .bg-slate-50 { background-color: #1e2937; }
+        .dark .border-slate-200 { border-color: #334155; }
+        .dark .text-slate-900 { color: #f1f5f9; }
+        .dark .text-slate-500 { color: #64748b; }
+        .dark .text-slate-400 { color: #94a3b8; }
+        .dark .table-row:hover { background-color: #334155; }
+        .dark #tableContainer thead { background-color: #1e2937; }
+        .dark .status-active { background-color: #10b981; color: #f1f5f9; }
+        .dark .status-maintenance { background-color: #f59e0b; color: #f1f5f9; }
+        .dark .status-inactive { background-color: #64748b; color: #f1f5f9; }
+        .dark .status-removed { background-color: #ef4444; color: #f1f5f9; }
+        .dark .bg-slate-800 { background-color: #1e2937; }
+        .dark .bg-emerald-600 { background-color: #10b981; }
+        .dark .bg-sky-600 { background-color: #0ea5e9; }
+        .dark .bg-red-600 { background-color: #ef4444; }
+        .dark .bg-amber-500 { background-color: #f59e0b; }
+        .dark input, .dark select, .dark textarea { background-color: #1e2937; border-color: #475569; color: #f1f5f9; }
+        .dark .tag { background-color: #0ea5e9; color: #f1f5f9; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <nav class="bg-white border-b shadow-sm sticky top-0 z-50">
+        <div class="max-w-screen-2xl mx-auto px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-9 h-9 bg-sky-500 rounded-2xl flex items-center justify-center text-white text-xl font-bold">💻</div>
+                <h1 class="text-2xl font-semibold tracking-tight">AV Technology</h1>
+                <span class="text-xs font-medium px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full">v2.6</span>
+            </div>
+            <div class="flex items-center gap-x-8 text-sm font-medium">
+                <!-- <button onclick="toggleDarkMode()" class="flex items-center gap-x-2 text-slate-700 hover:text-slate-900 transition-colors"><i id="themeIcon" class="fa-solid fa-moon"></i></button>-->
+                <button onclick="showSetupModal()" class="flex items-center gap-x-2 text-slate-700 hover:text-slate-900 transition-colors"><i class="fa-solid fa-cog"></i><span>Setup</span></button>
+                <div onclick="showUserDetailsModal()" class="flex items-center gap-x-3 cursor-pointer hover:bg-slate-100 px-3 py-1 rounded-3xl transition-colors">
+                    <div class="text-right">
+                        <div class="text-sm font-semibold" id="currentUserDisplay">Test User</div>
+                        <div class="text-xs text-slate-500">Madison, WI</div>
+                    </div>
+                    <div id="userAvatar" class="w-8 h-8 bg-amber-200 text-amber-800 rounded-2xl flex items-center justify-center font-bold">JW</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="max-w-screen-2xl mx-auto px-8 py-8">
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-x-4">
+                <button onclick="showAddAssetModal()" class="flex items-center gap-x-2 bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-3xl transition-all active:scale-95"><i class="fa-solid fa-plus"></i><span>Add Asset</span></button>
+                <div class="relative">
+                    <input id="searchInput" type="text" placeholder="Search table" onkeyup="if(event.key==='Enter') filterAndRenderTable()" class="w-80 pl-10 py-3 border border-slate-300 rounded-3xl focus:outline-none focus:border-sky-400 text-sm">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
+                </div>
+                <button onclick="showColumnModal()" class="flex items-center gap-x-2 px-5 py-3 border border-slate-300 hover:border-slate-400 rounded-3xl text-sm font-medium transition-colors"><i class="fa-solid fa-table-columns"></i><span>Columns</span></button>
+                <button onclick="exportCSV()" class="flex items-center gap-x-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-3xl text-sm font-medium transition-colors"><i class="fa-solid fa-file-csv"></i><span>Export CSV</span></button>
+                <button onclick="deleteSelected()" class="flex items-center gap-x-2 px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-3xl text-sm font-medium transition-colors disabled:opacity-40" id="deleteBtn"><i class="fa-solid fa-trash"></i><span>Delete Selected</span></button>
+            </div>
+        </div>
+        <div id="tableContainer" class="bg-white rounded-3xl shadow-sm border border-slate-200">
+            <table id="inventoryTable" class="w-full data-table">
+                <thead class="bg-slate-50 border-b">
+                    <tr id="tableHeaderRow" class="text-left text-xs font-medium text-slate-500 uppercase tracking-widest"></tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y text-sm"></tbody>
+            </table>
+            <div id="emptyState" class="hidden py-20 text-center">
+                <div class="mx-auto w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center text-4xl mb-6">📦</div>
+                <h3 class="text-xl font-medium">No assets found</h3>
+                <p class="text-slate-500 mt-2">Try a different search or add your first asset</p>
+                <button onclick="showAddAssetModal()" class="mt-6 px-6 py-3 bg-sky-600 text-white rounded-3xl text-sm font-medium">Add First Asset</button>
+            </div>
+        </div>
+        <div class="flex justify-end mt-4">
+            <p class="text-slate-500 text-sm" id="stats">Loading assets...</p>
+        </div>
+    </div>
+    <dialog id="assetModal" class="modal w-full max-w-2xl mx-4 bg-white rounded-3xl shadow-2xl p-0 overflow-hidden">
+        <div class="modal-header px-8 pt-6 pb-4 border-b flex items-center justify-between bg-white rounded-t-3xl" id="assetModalHeader">
+            <h3 id="modalTitle" class="text-2xl font-semibold">Add New Asset</h3>
+            <button onclick="hideAssetModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div class="form-scroll p-8 grid grid-cols-1 gap-y-6 text-sm" id="assetFormContent">
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Status</label>
+                <select id="statusSelect" class="w-full border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none">
+                    <option value="Active">Active</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="In-Active">In-Active</option>
+                    <option value="Removed">Removed</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Asset ID <span class="text-red-500">*</span></label>
+                <div class="flex gap-x-2">
+                    <input id="assetId" type="text" class="flex-1 border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none text-base font-mono">
+                    <button onclick="startBarcodeScan()" class="px-7 bg-slate-800 hover:bg-slate-900 text-white rounded-3xl flex items-center gap-x-2"><i class="fa-solid fa-barcode"></i><span>Scan</span></button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Make</label>
+                <div class="flex gap-x-2">
+                    <select id="makeSelect" onchange="updateDependentFields()" class="flex-1 border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none"></select>
+                    <button onclick="quickAddLookup(0)" class="px-6 bg-slate-800 text-white rounded-3xl flex items-center">Add</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Model</label>
+                <div class="flex gap-x-2">
+                    <select id="modelSelect" class="flex-1 border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none"></select>
+                    <button onclick="quickAddLookup(2)" class="px-6 bg-slate-800 text-white rounded-3xl flex items-center">Add</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Category</label>
+                <div class="flex gap-x-2">
+                    <input id="categoryInput" type="text" placeholder="Add category (e.g. Laptop)" class="flex-1 border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none">
+                    <button onclick="addCategoryTag()" class="px-6 bg-slate-800 text-white rounded-3xl">Add</button>
+                </div>
+                <div id="categoryTags" class="flex flex-wrap gap-2 mt-3"></div>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Serial Number</label>
+                <input id="serial" type="text" class="w-full border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none">
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">MAC Address 1</label>
+                <input id="mac1" type="text" placeholder="00:11:22:33:44:55" class="w-full border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none font-mono">
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">MAC Address 2</label>
+                <input id="mac2" type="text" placeholder="AA:BB:CC:DD:EE:FF" class="w-full border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none font-mono">
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Site</label>
+                <div class="flex gap-x-2">
+                    <select id="siteSelect" onchange="updateDependentFields()" class="flex-1 border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none"></select>
+                    <button onclick="quickAddLookup(3)" class="px-6 bg-slate-800 text-white rounded-3xl flex items-center">Add</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Building</label>
+                <div class="flex gap-x-2">
+                    <select id="buildingSelect" onchange="updateDependentFields()" class="flex-1 border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none"></select>
+                    <button onclick="quickAddLookup(4)" class="px-6 bg-slate-800 text-white rounded-3xl flex items-center">Add</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Room</label>
+                <div class="flex gap-x-2">
+                    <select id="roomSelect" class="flex-1 border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none"></select>
+                    <button onclick="quickAddLookup(5)" class="px-6 bg-slate-800 text-white rounded-3xl flex items-center">Add</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Relative Position</label>
+                <input id="position" type="text" placeholder="Rack 3U, Shelf B" class="w-full border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none">
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Note</label>
+                <textarea id="note" rows="3" class="w-full border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none resize-y"></textarea>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Added By</label>
+                <select id="addedBySelect" class="w-full border border-slate-300 focus:border-sky-400 rounded-3xl px-5 py-3 outline-none"></select>
+            </div>
+        </div>
+        <div class="px-8 py-6 bg-slate-50 flex justify-end gap-x-4 border-t">
+            <button onclick="hideAssetModal()" class="px-8 py-3 text-slate-600 hover:bg-slate-100 rounded-3xl font-medium">Cancel</button>
+            <button onclick="saveAsset()" id="saveBtn" class="px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-3xl font-medium">Save Asset</button>
+        </div>
+    </dialog>
+    <dialog id="detailsModal" class="modal w-full max-w-3xl mx-4 bg-white rounded-3xl shadow-2xl p-0 overflow-hidden">
+        <div class="modal-header px-8 pt-6 pb-4 border-b flex items-center justify-between" id="detailsModalHeader">
+            <h3 class="text-2xl font-semibold flex items-center gap-x-3">Asset Details <span id="detailAssetId" class="font-mono text-base bg-slate-100 px-3 py-1 rounded-2xl"></span></h3>
+            <button onclick="hideDetailsModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div id="detailsContent" class="p-8 text-sm grid grid-cols-2 gap-6 max-h-[65vh] overflow-y-auto"></div>
+        <div class="px-8 py-6 bg-slate-50 flex justify-between border-t">
+            <button onclick="copyToNewAsset()" class="flex items-center gap-x-2 px-6 py-3 text-slate-700 hover:bg-white border border-slate-300 rounded-3xl"><i class="fa-solid fa-copy"></i><span>Copy to new asset</span></button>
+            <div class="flex gap-x-3">
+                <button onclick="editFromDetails()" class="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-3xl">Edit</button>
+                <button onclick="hideDetailsModal()" class="px-8 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-3xl">Close</button>
+            </div>
+        </div>
+    </dialog>
+    <dialog id="setupModal" class="modal w-full max-w-4xl mx-4 bg-white rounded-3xl shadow-2xl p-0 overflow-hidden">
+        <div class="modal-header px-8 pt-6 pb-4 border-b flex items-center justify-between" id="setupModalHeader">
+            <h3 class="text-2xl font-semibold">Setup</h3>
+            <button onclick="hideSetupModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div class="p-8">
+            <div class="flex gap-x-2 mb-6 border-b">
+                <button onclick="switchLookupTab(0)" id="tab-0" class="tab-button px-6 py-2 font-medium border-b-2 border-transparent hover:text-sky-600 data-[active=true]:border-sky-600 data-[active=true]:text-sky-600">Makes</button>
+                <button onclick="switchLookupTab(1)" id="tab-1" class="tab-button px-6 py-2 font-medium border-b-2 border-transparent hover:text-sky-600 data-[active=true]:border-sky-600 data-[active=true]:text-sky-600">Categories</button>
+                <button onclick="switchLookupTab(2)" id="tab-2" class="tab-button px-6 py-2 font-medium border-b-2 border-transparent hover:text-sky-600 data-[active=true]:border-sky-600 data-[active=true]:text-sky-600">Models</button>
+                <button onclick="switchLookupTab(3)" id="tab-3" class="tab-button px-6 py-2 font-medium border-b-2 border-transparent hover:text-sky-600 data-[active=true]:border-sky-600 data-[active=true]:text-sky-600">Sites</button>
+                <button onclick="switchLookupTab(4)" id="tab-4" class="tab-button px-6 py-2 font-medium border-b-2 border-transparent hover:text-sky-600 data-[active=true]:border-sky-600 data-[active=true]:text-sky-600">Buildings</button>
+                <button onclick="switchLookupTab(5)" id="tab-5" class="tab-button px-6 py-2 font-medium border-b-2 border-transparent hover:text-sky-600 data-[active=true]:border-sky-600 data-[active=true]:text-sky-600">Rooms</button>
+            </div>
+            <div class="flex justify-end mb-6">
+                <button onclick="showAddLookupModal()" class="flex items-center gap-x-2 px-6 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-3xl text-sm font-medium"><i class="fa-solid fa-plus"></i><span>Add New</span></button>
+            </div>
+            <div id="lookupList" class="lookup-list border rounded-3xl p-2"></div>
+            <div id="modelFilter" class="hidden mt-4 flex items-center gap-x-3">
+                <label class="text-sm font-medium">Filter by Make:</label>
+                <select id="modelMakeFilter" onchange="switchLookupTab(2)" class="border border-slate-300 rounded-3xl px-4 py-2"></select>
+            </div>
+            <div id="buildingFilter" class="hidden mt-4 flex items-center gap-x-3">
+                <label class="text-sm font-medium">Filter by Site:</label>
+                <select id="buildingSiteFilter" onchange="switchLookupTab(4)" class="border border-slate-300 rounded-3xl px-4 py-2"></select>
+            </div>
+            <div id="roomFilter" class="hidden mt-4 flex items-center gap-x-3">
+                <label class="text-sm font-medium">Filter by Building:</label>
+                <select id="roomBuildingFilter" onchange="switchLookupTab(5)" class="border border-slate-300 rounded-3xl px-4 py-2"></select>
+            </div>
+            <div class="mt-8 pt-8 border-t flex items-center justify-between">
+                <div class="flex gap-x-3">
+                    <button onclick="exportAllData()" class="flex items-center gap-x-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-3xl text-sm font-medium"><i class="fa-solid fa-file-export"></i><span>Export All Data</span></button>
+                    <button onclick="triggerImport()" class="flex items-center gap-x-2 px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-3xl text-sm font-medium"><i class="fa-solid fa-file-import"></i><span>Import Data</span></button>
+                    <input type="file" id="importFile" accept=".json" class="hidden" onchange="importAllData(event)">
+                </div>
+                <button onclick="resetAllData()" class="text-red-500 hover:underline">Reset everything (demo data)</button>
+            </div>
+        </div>
+    </dialog>
+    <dialog id="columnModal" class="modal w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl p-0 overflow-hidden">
+        <div class="modal-header px-6 py-5 border-b flex items-center justify-between" id="columnModalHeader">
+            <h3 class="font-semibold text-xl">Show / Hide Columns</h3>
+            <button onclick="hideColumnModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div class="p-6">
+            <div id="columnList" class="space-y-3 text-sm"></div>
+        </div>
+    </dialog>
+    <dialog id="barcodeModal" class="modal w-full max-w-2xl mx-4 bg-white rounded-3xl shadow-2xl p-0 overflow-hidden">
+        <div class="modal-header px-8 pt-6 pb-4 border-b flex items-center justify-between bg-white rounded-t-3xl" id="barcodeModalHeader">
+            <h3 class="text-2xl font-semibold">Barcode Scanner</h3>
+            <button onclick="hideBarcodeModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div class="p-8">
+            <div id="scannerContainer" class="bg-black rounded-3xl overflow-hidden">
+                <div id="reader" style="width:100%;height:480px;"></div>
+            </div>
+            <div class="mt-6 flex gap-x-3">
+                <input id="manualBarcodeInput" type="text" placeholder="Or type barcode manually" class="flex-1 border border-slate-300 rounded-3xl px-5 py-3 text-sm">
+                <button onclick="useManualBarcode()" class="px-8 bg-sky-600 text-white rounded-3xl">Use</button>
+            </div>
+            <p class="text-xs text-slate-400 text-center mt-4">Works best on mobile with good lighting. Requires HTTPS.</p>
+        </div>
+    </dialog>
+    <dialog id="userDetailsModal" class="modal w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl p-0 overflow-hidden">
+        <div class="modal-header px-6 py-5 border-b flex items-center justify-between" id="userDetailsHeader">
+            <h3 class="font-semibold text-xl">User Details</h3>
+            <button onclick="hideUserDetailsModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div class="p-8">
+            <div id="userViewMode">
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Name</label>
+                    <div id="viewName" class="text-lg font-medium"></div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Job Title</label>
+                    <div id="viewJobTitle" class="text-lg font-medium"></div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Site</label>
+                    <div id="viewSite" class="text-lg font-medium"></div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Building</label>
+                    <div id="viewBuilding" class="text-lg font-medium"></div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Room</label>
+                    <div id="viewRoom" class="text-lg font-medium"></div>
+                </div>
+            </div>
+            <div id="userEditMode" class="hidden">
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Name</label>
+                    <input id="currentUserEditName" type="text" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Job Title</label>
+                    <input id="currentUserJobTitle" type="text" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Site</label>
+                    <select id="currentUserSite" onchange="updateUserDependentFields()" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none"></select>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Building</label>
+                    <select id="currentUserBuilding" onchange="updateUserDependentFields()" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none"></select>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-slate-500 mb-1 font-medium">Room</label>
+                    <select id="currentUserRoom" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none"></select>
+                </div>
+                <div class="flex justify-end gap-x-3">
+                    <button onclick="exitEditMode()" class="px-8 py-3 text-slate-600 hover:bg-slate-100 rounded-3xl font-medium">Cancel</button>
+                    <button onclick="saveCurrentUserDetails()" class="px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-3xl font-medium">Save</button>
+                </div>
+            </div>
+            <div class="mt-8 border-t pt-8">
+                <label class="block text-slate-500 mb-1 font-medium">Switch User</label>
+                <select id="userSwitchDropdown" onchange="switchUserFromDropdown()" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none"></select>
+            </div>
+            <div class="mt-6 flex justify-end gap-x-3">
+                <button onclick="enterEditMode()" class="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-3xl">Edit</button>
+                <button onclick="deleteCurrentUser()" id="deleteUserBtn" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-3xl">Delete User</button>
+                <button onclick="showAddNewUserForm()" class="flex items-center gap-x-2 px-6 py-3 bg-slate-800 text-white rounded-3xl text-sm font-medium"><i class="fa-solid fa-plus"></i><span>Add New User</span></button>
+            </div>
+        </div>
+    </dialog>
+    <dialog id="addLookupModal" class="modal w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl p-0 overflow-hidden">
+        <div class="modal-header px-6 py-5 border-b flex items-center justify-between" id="addLookupHeader">
+            <h3 id="addLookupTitle" class="font-semibold text-xl">Add New Item</h3>
+            <button onclick="hideAddLookupModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div class="p-8" id="addLookupFormContent"></div>
+        <div class="px-8 py-6 bg-slate-50 flex justify-end gap-x-4 border-t">
+            <button onclick="hideAddLookupModal()" class="px-8 py-3 text-slate-600 hover:bg-slate-100 rounded-3xl font-medium">Cancel</button>
+            <button onclick="saveNewLookupItem()" id="saveLookupBtn" class="px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-3xl font-medium">Add Item</button>
+        </div>
+    </dialog>
+    <dialog id="addNewUserModal" class="modal w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl p-0 overflow-hidden">
+        <div class="modal-header px-6 py-5 border-b flex items-center justify-between" id="addNewUserHeader">
+            <h3 class="font-semibold text-xl">Add New User</h3>
+            <button onclick="hideAddNewUserModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+        </div>
+        <div class="p-8">
+            <div class="mb-6">
+                <label class="block text-slate-500 mb-1 font-medium">Name</label>
+                <input id="newUserName" type="text" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">
+            </div>
+            <div class="mb-6">
+                <label class="block text-slate-500 mb-1 font-medium">Job Title</label>
+                <input id="newUserJobTitle" type="text" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">
+            </div>
+            <div class="mb-6">
+                <label class="block text-slate-500 mb-1 font-medium">Site</label>
+                <select id="newUserSite" onchange="updateNewUserDependentFields()" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none"></select>
+            </div>
+            <div class="mb-6">
+                <label class="block text-slate-500 mb-1 font-medium">Building</label>
+                <select id="newUserBuilding" onchange="updateNewUserDependentFields()" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none"></select>
+            </div>
+            <div class="mb-6">
+                <label class="block text-slate-500 mb-1 font-medium">Room</label>
+                <select id="newUserRoom" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none"></select>
+            </div>
+        </div>
+        <div class="px-8 py-6 bg-slate-50 flex justify-end gap-x-4 border-t">
+            <button onclick="hideAddNewUserModal()" class="px-8 py-3 text-slate-600 hover:bg-slate-100 rounded-3xl font-medium">Cancel</button>
+            <button onclick="saveNewUser()" class="px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-3xl font-medium">Add User</button>
+        </div>
+    </dialog>
+    <script>
+let assets = [];
+let lookups = {
+    makes: ["Apple","Cisco","Dell","HP","Lenovo"],
+    categories: ["Desktop","Laptop","Monitor","Printer","Server","Switch"],
+    models: [{make: "Apple", name: "MacBook Pro"},{make: "Dell", name: "Latitude 7490"},{make: "Dell", name: "XPS 15"},{make: "HP", name: "EliteBook 840"},{make: "Lenovo", name: "ThinkPad X1"}],
+    sites: ["FDL"],
+    buildings: [{site: "FDL", name: "A"},{site: "FDL", name: "B"}],
+    rooms: [{building: "A", name: "A203"},{building: "A", name: "A206"},{building: "A", name: "A207"},{building: "A", name: "L137"},{building: "B", name: "B104"}],
+    users: [{name: "Test User", jobTitle: "AV Technician", site: "FDL", building: "B", room: "B104"},{name: "Test User 4", jobTitle: "Senior Engineer", site: "FDL", building: "B", room: "B104"},{name: "Test User 2", jobTitle: "AV Technology Manager", site: "FDL", building: "A", room: "A203"},{name: "Test User 3", jobTitle: "AV Specialist", site: "FDL", building: "A", room: "A206"}]
+};
+let currentUserIndex = 0;
+let currentEditId = null;
+let sortColumn = 'addedOn';
+let sortDirection = 'desc';
+let visibleColumns = { make: true, model: true, serial: true, mac1: true, mac2: true, site: true, building: true, room: true, category: true };
+let selectedAssets = new Set();
+let currentLookupTab = 0;
+const lookupKeys = ['makes', 'categories', 'models', 'sites', 'buildings', 'rooms'];
+const STORAGE_KEY = 'assetflow_inventory';
+let currentCategoryTags = [];
+let html5QrCode = null;
+let isDarkMode = false;
+function makeDraggable(modalId, headerId) {
+    const modal = document.getElementById(modalId);
+    const header = document.getElementById(headerId);
+    if (!modal || !header) return;
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    header.onmousedown = dragMouseDown;
+    function dragMouseDown(e) {
+        if (e.target.tagName === 'BUTTON') return;
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+        modal.style.position = 'fixed';
+        modal.style.margin = '0';
+        modal.style.top = modal.getBoundingClientRect().top + 'px';
+        modal.style.left = modal.getBoundingClientRect().left + 'px';
+    }
+    function elementDrag(e) {
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        modal.style.top = (modal.offsetTop - pos2) + "px";
+        modal.style.left = (modal.offsetLeft - pos1) + "px";
+    }
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
+}
+function loadData() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        const data = JSON.parse(saved);
+        assets = data.assets || [];
+        lookups = { ...lookups, ...data.lookups };
+        if (data.currentUserIndex !== undefined) currentUserIndex = data.currentUserIndex;
+    } else {
+        assets = [
+            {id: "AF-2026-0001", make: "Dell", categories: ["Laptop"], model: "XPS 15", serial: "8F9K2L3M4N", mac1: "00:1A:2B:3C:4D:5E", mac2: "AA:BB:CC:DD:EE:FF", site: "FDL", building: "B", room: "B104", position: "Desk 12", note: "Primary engineering laptop", status: "Active", addedBy: "Test User", addedOn: "2026-04-10T09:15:00.000Z", lastUpdatedBy: "Test User", lastUpdatedOn: "2026-04-12T14:30:00.000Z"},
+            {id: "AF-2026-0002", make: "HP", categories: ["Server"], model: "ProLiant DL380", serial: "P9X7Q2R4T6", mac1: "11:22:33:44:55:66", mac2: "", site: "FDL", building: "B", room: "B104", position: "Rack 12U", note: "", status: "Maintenance", addedBy: "Test User", addedOn: "2026-04-08T11:45:00.000Z", lastUpdatedBy: "Test User", lastUpdatedOn: "2026-04-14T08:00:00.000Z"}
+        ];
+        saveData();
+    }
+    if (!lookups.users || !Array.isArray(lookups.users) || lookups.users.length === 0) {
+        lookups.users = [
+            {name: "Test User", jobTitle: "AV Technician", site: "FDL", building: "B", room: "B104"},
+            {name: "Test User 4", jobTitle: "Senior Engineer", site: "FDL", building: "B", room: "B104"},
+            {name: "Test User 2", jobTitle: "AV Technology Manager", site: "FDL", building: "A", room: "A203"},
+            {name: "Test User 3", jobTitle: "AV Specialist", site: "FDL", building: "A", room: "A206"}
+        ];
+        currentUserIndex = 0;
+    }
+    if (currentUserIndex < 0 || currentUserIndex >= lookups.users.length) currentUserIndex = 0;
+    lookups.makes.sort((a,b)=>a.localeCompare(b));
+    lookups.categories.sort((a,b)=>a.localeCompare(b));
+    lookups.models.sort((a,b)=>a.name.localeCompare(b.name));
+    lookups.sites.sort((a,b)=>a.localeCompare(b));
+    lookups.buildings.sort((a,b)=>a.name.localeCompare(b.name));
+    lookups.rooms.sort((a,b)=>a.name.localeCompare(b.name));
+    updateCurrentUserDisplay();
+}
+function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({assets, lookups, currentUserIndex}));
+}
+function updateCurrentUserDisplay() {
+    const user = lookups.users[currentUserIndex];
+    if (!user || !user.name) {
+        document.getElementById('currentUserDisplay').textContent = 'Unknown';
+        return;
+    }
+    document.getElementById('currentUserDisplay').textContent = user.name;
+    const avatar = document.getElementById('userAvatar');
+    avatar.textContent = user.name.split(' ').map(n => n[0]).join('').slice(0,2);
+}
+function renderHeader() {
+    const headerRow = document.getElementById('tableHeaderRow');
+    headerRow.innerHTML = `
+        <th class="w-12 px-6 py-5"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+        <th class="px-6 py-5">Actions</th>
+        <th onclick="sortTable('status')" class="px-6 py-5">Status <i class="fa-solid fa-sort text-xs ml-1" id="sort-status"></i></th>
+        <th onclick="sortTable('id')" class="px-6 py-5">Asset ID <i class="fa-solid fa-sort text-xs ml-1" id="sort-id"></i></th>
+        <th onclick="sortTable('make')" class="px-6 py-5">Make <i class="fa-solid fa-sort text-xs ml-1" id="sort-make"></i></th>
+        <th onclick="sortTable('model')" class="px-6 py-5">Model <i class="fa-solid fa-sort text-xs ml-1" id="sort-model"></i></th>
+        <th class="px-6 py-5">Category</th>
+        ${visibleColumns.serial ? `<th class="px-6 py-5">Serial</th>` : ''}
+        ${visibleColumns.mac1 ? `<th class="px-6 py-5">MAC 1</th>` : ''}
+        ${visibleColumns.mac2 ? `<th class="px-6 py-5">MAC 2</th>` : ''}
+        ${visibleColumns.site ? `<th onclick="sortTable('site')" class="px-6 py-5">Site <i class="fa-solid fa-sort text-xs ml-1" id="sort-site"></i></th>` : ''}
+        ${visibleColumns.building ? `<th onclick="sortTable('building')" class="px-6 py-5">Building <i class="fa-solid fa-sort text-xs ml-1" id="sort-building"></i></th>` : ''}
+        ${visibleColumns.room ? `<th onclick="sortTable('room')" class="px-6 py-5">Room <i class="fa-solid fa-sort text-xs ml-1" id="sort-room"></i></th>` : ''}
+        <th class="px-6 py-5">Position</th>
+        <th class="px-6 py-5">Added By</th>
+        <th onclick="sortTable('addedOn')" class="px-6 py-5">Added On <i class="fa-solid fa-sort text-xs ml-1" id="sort-addedOn"></i></th>
+    `;
+}
+function renderTable(filteredAssets) {
+    renderHeader();
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    if (filteredAssets.length === 0) {
+        document.getElementById('emptyState').classList.remove('hidden');
+        return;
+    }
+    document.getElementById('emptyState').classList.add('hidden');
+    filteredAssets.forEach(asset => {
+        const row = document.createElement('tr');
+        row.className = 'table-row';
+        row.innerHTML = `
+            <td class="px-6 py-4"><input type="checkbox" onchange="toggleAssetSelection('${asset.id}', this.checked)" ${selectedAssets.has(asset.id) ? 'checked' : ''}></td>
+            <td class="px-6 py-4">
+                <button onclick="copyToNewAssetFromId('${asset.id}');event.stopImmediatePropagation()" class="text-emerald-600 hover:text-emerald-700"><i class="fa-solid fa-copy"></i></button>
+            </td>
+            <td class="px-6 py-4"><span class="status-${asset.status.toLowerCase()} text-[10px] font-medium px-3 py-px rounded-3xl">${asset.status}</span></td>
+            <td onclick="showAssetDetails('${asset.id}')" class="px-6 py-4 font-mono font-medium cursor-pointer hover:underline whitespace-nowrap">${asset.id}</td>
+            <td class="px-6 py-4">${asset.make}</td>
+            <td class="px-6 py-4">${asset.model}</td>
+            <td class="px-6 py-4">${asset.categories ? asset.categories.join(', ') : ''}</td>
+            ${visibleColumns.serial ? `<td class="px-6 py-4 font-mono">${asset.serial || '-'}</td>` : ''}
+            ${visibleColumns.mac1 ? `<td class="px-6 py-4 font-mono">${asset.mac1 || '-'}</td>` : ''}
+            ${visibleColumns.mac2 ? `<td class="px-6 py-4 font-mono">${asset.mac2 || '-'}</td>` : ''}
+            ${visibleColumns.site ? `<td class="px-6 py-4">${asset.site}</td>` : ''}
+            ${visibleColumns.building ? `<td class="px-6 py-4">${asset.building}</td>` : ''}
+            ${visibleColumns.room ? `<td class="px-6 py-4">${asset.room}</td>` : ''}
+            <td class="px-6 py-4">${asset.position || '-'}</td>
+            <td class="px-6 py-4">${asset.addedBy}</td>
+            <td class="px-6 py-4 text-xs text-slate-500">${new Date(asset.addedOn).toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}</td>
+        `;
+        tbody.appendChild(row);
+    });
+    updateStats(filteredAssets.length);
+}
+function updateStats(count) {
+    document.getElementById('stats').innerHTML = `<span class="font-semibold">${count}</span> assets • Last updated: ${new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'})}`;
+}
+function filterAndRenderTable() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    let filtered = assets.filter(asset => {
+        const searchable = `${asset.id} ${asset.make} ${asset.model} ${asset.serial} ${asset.mac1} ${asset.mac2} ${asset.site} ${asset.building} ${asset.room} ${asset.note} ${asset.categories ? asset.categories.join(' ') : ''}`.toLowerCase();
+        return searchable.includes(searchTerm);
+    });
+    filtered.sort((a, b) => {
+        let valA = a[sortColumn], valB = b[sortColumn];
+        if (sortColumn === 'addedOn' || sortColumn === 'lastUpdatedOn') {
+            valA = new Date(valA);
+            valB = new Date(valB);
+        }
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+    });
+    renderTable(filtered);
+}
+function sortTable(col) {
+    if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = col;
+        sortDirection = 'desc';
+    }
+    document.querySelectorAll('th i').forEach(i => i.className = 'fa-solid fa-sort text-xs ml-1');
+    const icon = document.getElementById(`sort-${col}`);
+    if (icon) icon.className = sortDirection === 'asc' ? 'fa-solid fa-sort-up text-xs ml-1' : 'fa-solid fa-sort-down text-xs ml-1';
+    filterAndRenderTable();
+}
+function showAddAssetModal(isEdit = false) {
+    if (!isEdit) currentEditId = null;
+    document.getElementById('modalTitle').innerHTML = `Add New Asset <span class="text-xs font-mono bg-emerald-100 text-emerald-700 px-2 py-px rounded">NEW</span>`;
+    document.getElementById('saveBtn').innerText = 'Save Asset';
+    populateSelect('makeSelect', lookups.makes);
+    populateSelect('siteSelect', lookups.sites);
+    populateSelect('addedBySelect', lookups.users.map(u => u.name));
+    currentCategoryTags = [];
+    renderCategoryTags();
+    const assetIdInput = document.getElementById('assetId');
+    assetIdInput.value = `AF-${new Date().getFullYear()}-${String(assets.length + 1001).padStart(4, '0')}`;
+    assetIdInput.removeAttribute('readonly');
+    document.getElementById('serial').value = '';
+    document.getElementById('mac1').value = '';
+    document.getElementById('mac2').value = '';
+    document.getElementById('position').value = '';
+    document.getElementById('note').value = '';
+    document.getElementById('statusSelect').value = 'Active';
+    document.getElementById('addedBySelect').value = lookups.users[currentUserIndex].name;
+    updateDependentFields();
+    const modal = document.getElementById('assetModal');
+    modal.showModal();
+    makeDraggable('assetModal', 'assetModalHeader');
+}
+function hideAssetModal() {
+    document.getElementById('assetModal').close();
+}
+function saveAsset() {
+    const newId = document.getElementById('assetId').value.trim();
+    if (!newId) {
+        alert('Asset ID is required');
+        return;
+    }
+    if (!currentEditId) {
+        const isDuplicate = assets.some(a => a.id === newId);
+        if (isDuplicate) {
+            alert('Asset ID already exists. Please use a unique ID.');
+            return;
+        }
+    }
+    const asset = {
+        id: newId,
+        make: document.getElementById('makeSelect').value,
+        categories: [...currentCategoryTags],
+        model: document.getElementById('modelSelect').value,
+        serial: document.getElementById('serial').value.trim(),
+        mac1: document.getElementById('mac1').value.trim(),
+        mac2: document.getElementById('mac2').value.trim(),
+        site: document.getElementById('siteSelect').value,
+        building: document.getElementById('buildingSelect').value,
+        room: document.getElementById('roomSelect').value,
+        position: document.getElementById('position').value.trim(),
+        note: document.getElementById('note').value.trim(),
+        status: document.getElementById('statusSelect').value,
+        addedBy: document.getElementById('addedBySelect').value,
+    };
+    const now = new Date().toISOString();
+    if (currentEditId) {
+        const existing = assets.find(a => a.id === currentEditId);
+        if (existing) {
+            Object.assign(existing, asset);
+            existing.lastUpdatedBy = lookups.users[currentUserIndex].name;
+            existing.lastUpdatedOn = now;
+        }
+    } else {
+        asset.addedOn = now;
+        asset.lastUpdatedBy = lookups.users[currentUserIndex].name;
+        asset.lastUpdatedOn = now;
+        assets.unshift(asset);
+    }
+    saveData();
+    hideAssetModal();
+    filterAndRenderTable();
+}
+function populateSelect(id, options) {
+    const select = document.getElementById(id);
+    select.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+}
+function updateDependentFields() {
+    const make = document.getElementById('makeSelect').value;
+    const modelSelect = document.getElementById('modelSelect');
+    const currentModel = modelSelect.value;
+    modelSelect.innerHTML = '';
+    const filteredModels = lookups.models.filter(m => m.make === make);
+    filteredModels.forEach(m => {
+        const option = document.createElement('option');
+        option.value = m.name;
+        option.textContent = m.name;
+        modelSelect.appendChild(option);
+    });
+    if (filteredModels.some(m => m.name === currentModel)) modelSelect.value = currentModel;
+    const site = document.getElementById('siteSelect').value;
+    const buildingSelect = document.getElementById('buildingSelect');
+    const currentBuilding = buildingSelect.value;
+    buildingSelect.innerHTML = '';
+    const filteredBuildings = lookups.buildings.filter(b => b.site === site);
+    filteredBuildings.forEach(b => {
+        const option = document.createElement('option');
+        option.value = b.name;
+        option.textContent = b.name;
+        buildingSelect.appendChild(option);
+    });
+    if (filteredBuildings.some(b => b.name === currentBuilding)) buildingSelect.value = currentBuilding;
+    const building = document.getElementById('buildingSelect').value;
+    const roomSelect = document.getElementById('roomSelect');
+    const currentRoom = roomSelect.value;
+    roomSelect.innerHTML = '';
+    const filteredRooms = lookups.rooms.filter(r => r.building === building);
+    filteredRooms.forEach(r => {
+        const option = document.createElement('option');
+        option.value = r.name;
+        option.textContent = r.name;
+        roomSelect.appendChild(option);
+    });
+    if (filteredRooms.some(r => r.name === currentRoom)) roomSelect.value = currentRoom;
+}
+function quickAddLookup(tabIndex) {
+    currentLookupTab = tabIndex;
+    showAddLookupModal();
+}
+function addCategoryTag() {
+    const input = document.getElementById('categoryInput');
+    const value = input.value.trim();
+    if (!value || currentCategoryTags.includes(value)) return;
+    currentCategoryTags.push(value);
+    renderCategoryTags();
+    input.value = '';
+}
+function removeCategoryTag(tag) {
+    currentCategoryTags = currentCategoryTags.filter(t => t !== tag);
+    renderCategoryTags();
+}
+function renderCategoryTags() {
+    const container = document.getElementById('categoryTags');
+    container.innerHTML = currentCategoryTags.map(tag => `
+        <div class="tag flex items-center gap-x-1 px-3 py-1 rounded-3xl text-sm">
+            <span>${tag}</span>
+            <button onclick="removeCategoryTag('${tag}')" class="text-sky-700 hover:text-red-500">×</button>
+        </div>
+    `).join('');
+}
+function showAssetDetails(id) {
+    const asset = assets.find(a => a.id === id);
+    if (!asset) return;
+    currentEditId = id;
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `
+        <div><strong class="text-slate-500">Asset ID</strong><div class="font-mono mt-1">${asset.id}</div></div>
+        <div><strong class="text-slate-500">Status</strong><div class="mt-1"><span class="status-${asset.status.toLowerCase()} text-xs px-4 py-1 rounded-3xl">${asset.status}</span></div></div>
+        <div><strong class="text-slate-500">Make</strong><div class="mt-1">${asset.make}</div></div>
+        <div><strong class="text-slate-500">Model</strong><div class="mt-1">${asset.model}</div></div>
+        <div><strong class="text-slate-500">Categories</strong><div class="mt-1">${asset.categories ? asset.categories.join(', ') : ''}</div></div>
+        <div><strong class="text-slate-500">Serial</strong><div class="mt-1 font-mono">${asset.serial || '—'}</div></div>
+        <div><strong class="text-slate-500">MAC 1</strong><div class="mt-1 font-mono">${asset.mac1 || '—'}</div></div>
+        <div><strong class="text-slate-500">MAC 2</strong><div class="mt-1 font-mono">${asset.mac2 || '—'}</div></div>
+        <div><strong class="text-slate-500">Site / Building / Room</strong><div class="mt-1">${asset.site} • ${asset.building} • ${asset.room}</div></div>
+        <div><strong class="text-slate-500">Position</strong><div class="mt-1">${asset.position || '—'}</div></div>
+        <div><strong class="text-slate-500">Note</strong><div class="mt-1">${asset.note || '—'}</div></div>
+        <div><strong class="text-slate-500">Added By</strong><div class="mt-1">${asset.addedBy}</div></div>
+        <div><strong class="text-slate-500">Added On</strong><div class="mt-1">${new Date(asset.addedOn).toLocaleString()}</div></div>
+        <div><strong class="text-slate-500">Last Updated By</strong><div class="mt-1">${asset.lastUpdatedBy}</div></div>
+        <div><strong class="text-slate-500">Last Updated On</strong><div class="mt-1">${new Date(asset.lastUpdatedOn).toLocaleString()}</div></div>
+    `;
+    document.getElementById('detailAssetId').textContent = asset.id;
+    const modal = document.getElementById('detailsModal');
+    modal.showModal();
+    makeDraggable('detailsModal', 'detailsModalHeader');
+}
+function hideDetailsModal() {
+    document.getElementById('detailsModal').close();
+}
+function editFromDetails() {
+    hideDetailsModal();
+    const asset = assets.find(a => a.id === currentEditId);
+    if (!asset) return;
+    currentEditId = asset.id;
+    showAddAssetModal(true);
+    document.getElementById('modalTitle').innerHTML = `Edit Asset <span class="font-mono text-base bg-slate-100 px-3 py-1 rounded-2xl">${asset.id}</span>`;
+    document.getElementById('saveBtn').innerText = 'Update Asset';
+    populateSelect('makeSelect', lookups.makes);
+    populateSelect('siteSelect', lookups.sites);
+    populateSelect('addedBySelect', lookups.users.map(u => u.name));
+    const assetIdInput = document.getElementById('assetId');
+    assetIdInput.value = asset.id;
+    assetIdInput.setAttribute('readonly', 'true');
+    document.getElementById('makeSelect').value = asset.make;
+    currentCategoryTags = asset.categories ? [...asset.categories] : [];
+    renderCategoryTags();
+    document.getElementById('serial').value = asset.serial;
+    document.getElementById('mac1').value = asset.mac1;
+    document.getElementById('mac2').value = asset.mac2;
+    document.getElementById('siteSelect').value = asset.site;
+    document.getElementById('buildingSelect').value = asset.building;
+    document.getElementById('roomSelect').value = asset.room;
+    document.getElementById('position').value = asset.position;
+    document.getElementById('note').value = asset.note;
+    document.getElementById('statusSelect').value = asset.status;
+    document.getElementById('addedBySelect').value = asset.addedBy;
+    updateDependentFields();
+}
+function copyToNewAssetFromId(id) {
+    const asset = assets.find(a => a.id === id);
+    if (!asset) return;
+    hideDetailsModal();
+    copyToNewAsset(asset);
+}
+function copyToNewAsset(asset = null) {
+    showAddAssetModal();
+    if (asset) {
+        populateSelect('makeSelect', lookups.makes);
+        populateSelect('siteSelect', lookups.sites);
+        populateSelect('addedBySelect', lookups.users.map(u => u.name));
+        const assetIdInput = document.getElementById('assetId');
+        assetIdInput.value = `AF-${new Date().getFullYear()}-${String(assets.length + 1001).padStart(4, '0')}`;
+        assetIdInput.removeAttribute('readonly');
+        document.getElementById('makeSelect').value = asset.make;
+        currentCategoryTags = asset.categories ? [...asset.categories] : [];
+        renderCategoryTags();
+        document.getElementById('serial').value = asset.serial;
+        document.getElementById('mac1').value = asset.mac1;
+        document.getElementById('mac2').value = asset.mac2;
+        document.getElementById('siteSelect').value = asset.site;
+        document.getElementById('buildingSelect').value = asset.building;
+        document.getElementById('roomSelect').value = asset.room;
+        document.getElementById('position').value = asset.position;
+        document.getElementById('note').value = asset.note;
+        updateDependentFields();
+    }
+}
+function showSetupModal() {
+    const modal = document.getElementById('setupModal');
+    modal.showModal();
+    makeDraggable('setupModal', 'setupModalHeader');
+    switchLookupTab(0);
+}
+function hideSetupModal() {
+    document.getElementById('setupModal').close();
+}
+function switchLookupTab(tabIndex) {
+    currentLookupTab = tabIndex;
+    document.querySelectorAll('.tab-button').forEach((btn, i) => {
+        btn.dataset.active = (i === tabIndex).toString();
+    });
+    const key = lookupKeys[tabIndex];
+    const container = document.getElementById('lookupList');
+    let html = `<div class="grid grid-cols-2 md:grid-cols-3 gap-2">`;
+    if (key === 'models') {
+        document.getElementById('modelFilter').classList.remove('hidden');
+        document.getElementById('buildingFilter').classList.add('hidden');
+        document.getElementById('roomFilter').classList.add('hidden');
+        const makeFilter = document.getElementById('modelMakeFilter');
+        const currentFilterValue = makeFilter.value;
+        makeFilter.innerHTML = `<option value="">All</option>` + lookups.makes.map(m => `<option value="${m}" ${m === currentFilterValue ? 'selected' : ''}>${m}</option>`).join('');
+        const selectedMake = makeFilter.value;
+        let filtered = lookups.models;
+        if (selectedMake) filtered = lookups.models.filter(m => m.make === selectedMake);
+        filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+        filtered.forEach(item => {
+            html += `
+                <div class="flex items-center justify-between bg-slate-50 rounded-2xl px-5 py-3 text-sm">
+                    <span>${item.make || '—'} • ${item.name || item}</span>
+                    <button onclick="deleteLookupItem('${key}', '${item.name || item}')" class="text-red-500 hover:text-red-600">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+        });
+    } else if (key === 'buildings') {
+        document.getElementById('modelFilter').classList.add('hidden');
+        document.getElementById('buildingFilter').classList.remove('hidden');
+        document.getElementById('roomFilter').classList.add('hidden');
+        const siteFilter = document.getElementById('buildingSiteFilter');
+        const currentFilterValue = siteFilter.value;
+        siteFilter.innerHTML = `<option value="">All</option>` + lookups.sites.map(s => `<option value="${s}" ${s === currentFilterValue ? 'selected' : ''}>${s}</option>`).join('');
+        const selectedSite = siteFilter.value;
+        let filtered = lookups.buildings;
+        if (selectedSite) filtered = lookups.buildings.filter(b => b.site === selectedSite);
+        filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+        filtered.forEach(item => {
+            html += `
+                <div class="flex items-center justify-between bg-slate-50 rounded-2xl px-5 py-3 text-sm">
+                    <span>${item.site || '—'} • ${item.name || item}</span>
+                    <button onclick="deleteLookupItem('${key}', '${item.name || item}')" class="text-red-500 hover:text-red-600">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+        });
+    } else if (key === 'rooms') {
+        document.getElementById('modelFilter').classList.add('hidden');
+        document.getElementById('buildingFilter').classList.add('hidden');
+        document.getElementById('roomFilter').classList.remove('hidden');
+        const buildingFilter = document.getElementById('roomBuildingFilter');
+        const currentFilterValue = buildingFilter.value;
+        buildingFilter.innerHTML = `<option value="">All</option>` + lookups.buildings.map(b => `<option value="${b.name}" ${b.name === currentFilterValue ? 'selected' : ''}>${b.name}</option>`).join('');
+        const selectedBuilding = buildingFilter.value;
+        let filtered = lookups.rooms;
+        if (selectedBuilding) filtered = lookups.rooms.filter(r => r.building === selectedBuilding);
+        filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+        filtered.forEach(item => {
+            html += `
+                <div class="flex items-center justify-between bg-slate-50 rounded-2xl px-5 py-3 text-sm">
+                    <span>${item.building || '—'} • ${item.name || item}</span>
+                    <button onclick="deleteLookupItem('${key}', '${item.name || item}')" class="text-red-500 hover:text-red-600">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+        });
+    } else {
+        document.getElementById('modelFilter').classList.add('hidden');
+        document.getElementById('buildingFilter').classList.add('hidden');
+        document.getElementById('roomFilter').classList.add('hidden');
+        lookups[key].forEach(item => {
+            html += `
+                <div class="flex items-center justify-between bg-slate-50 rounded-2xl px-5 py-3 text-sm">
+                    <span>${item}</span>
+                    <button onclick="deleteLookupItem('${key}', '${item}')" class="text-red-500 hover:text-red-600">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+        });
+    }
+    html += `</div>`;
+    container.innerHTML = html;
+}
+function deleteLookupItem(key, value) {
+    if (confirm(`Delete this item?`)) {
+        if (key === 'models') {
+            lookups.models = lookups.models.filter(m => (m.name || m) !== value);
+        } else if (key === 'buildings') {
+            lookups.buildings = lookups.buildings.filter(b => (b.name || b) !== value);
+        } else if (key === 'rooms') {
+            lookups.rooms = lookups.rooms.filter(r => (r.name || r) !== value);
+        } else {
+            lookups[key] = lookups[key].filter(item => item !== value);
+        }
+        saveData();
+        switchLookupTab(currentLookupTab);
+    }
+}
+function showAddLookupModal() {
+    const tabKey = lookupKeys[currentLookupTab];
+    let formHTML = '';
+    if (tabKey === 'models') {
+        formHTML = `
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Make</label>
+                <select id="newModelMake" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">${lookups.makes.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
+            </div>
+            <div class="mt-4">
+                <label class="block text-slate-500 mb-1 font-medium">Model Name</label>
+                <input id="newModelName" type="text" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">
+            </div>
+        `;
+    } else if (tabKey === 'buildings') {
+        formHTML = `
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Site</label>
+                <select id="newBuildingSite" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">${lookups.sites.map(s => `<option value="${s}">${s}</option>`).join('')}</select>
+            </div>
+            <div class="mt-4">
+                <label class="block text-slate-500 mb-1 font-medium">Building Name</label>
+                <input id="newBuildingName" type="text" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">
+            </div>
+        `;
+    } else if (tabKey === 'rooms') {
+        formHTML = `
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Building</label>
+                <select id="newRoomBuilding" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">${lookups.buildings.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}</select>
+            </div>
+            <div class="mt-4">
+                <label class="block text-slate-500 mb-1 font-medium">Room Name</label>
+                <input id="newRoomName" type="text" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">
+            </div>
+        `;
+    } else {
+        formHTML = `
+            <div>
+                <label class="block text-slate-500 mb-1 font-medium">Name</label>
+                <input id="newSimpleName" type="text" class="w-full border border-slate-300 rounded-3xl px-5 py-3 outline-none">
+            </div>
+        `;
+    }
+    document.getElementById('addLookupFormContent').innerHTML = formHTML;
+    document.getElementById('addLookupTitle').textContent = `Add New ${tabKey.charAt(0).toUpperCase() + tabKey.slice(1, -1)}`;
+    const modal = document.getElementById('addLookupModal');
+    modal.showModal();
+    makeDraggable('addLookupModal', 'addLookupHeader');
+}
+function hideAddLookupModal() {
+    document.getElementById('addLookupModal').close();
+}
+function saveNewLookupItem() {
+    const tabKey = lookupKeys[currentLookupTab];
+    if (tabKey === 'models') {
+        const make = document.getElementById('newModelMake').value;
+        const name = document.getElementById('newModelName').value.trim();
+        if (name && !lookups.models.some(m => m.make === make && m.name === name)) {
+            lookups.models.push({make: make, name: name});
+            lookups.models.sort((a, b) => a.name.localeCompare(b.name));
+        }
+    } else if (tabKey === 'buildings') {
+        const site = document.getElementById('newBuildingSite').value;
+        const name = document.getElementById('newBuildingName').value.trim();
+        if (name && !lookups.buildings.some(b => b.site === site && b.name === name)) {
+            lookups.buildings.push({site: site, name: name});
+            lookups.buildings.sort((a, b) => a.name.localeCompare(b.name));
+        }
+    } else if (tabKey === 'rooms') {
+        const building = document.getElementById('newRoomBuilding').value;
+        const name = document.getElementById('newRoomName').value.trim();
+        if (name && !lookups.rooms.some(r => r.building === building && r.name === name)) {
+            lookups.rooms.push({building: building, name: name});
+            lookups.rooms.sort((a, b) => a.name.localeCompare(b.name));
+        }
+    } else {
+        const name = document.getElementById('newSimpleName').value.trim();
+        if (name && !lookups[tabKey].includes(name)) {
+            lookups[tabKey].push(name);
+            lookups[tabKey].sort((a, b) => a.localeCompare(b));
+        }
+    }
+    saveData();
+    hideAddLookupModal();
+    switchLookupTab(currentLookupTab);
+    if (document.getElementById('assetModal').open) {
+        populateSelect('makeSelect', lookups.makes);
+        populateSelect('siteSelect', lookups.sites);
+        updateDependentFields();
+    }
+}
+function showColumnModal() {
+    const container = document.getElementById('columnList');
+    container.innerHTML = `
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.make ? 'checked' : ''} onchange="toggleColumn('make', this.checked)"> Make</label>
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.model ? 'checked' : ''} onchange="toggleColumn('model', this.checked)"> Model</label>
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.serial ? 'checked' : ''} onchange="toggleColumn('serial', this.checked)"> Serial</label>
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.mac1 ? 'checked' : ''} onchange="toggleColumn('mac1', this.checked)"> MAC 1</label>
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.mac2 ? 'checked' : ''} onchange="toggleColumn('mac2', this.checked)"> MAC 2</label>
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.site ? 'checked' : ''} onchange="toggleColumn('site', this.checked)"> Site</label>
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.building ? 'checked' : ''} onchange="toggleColumn('building', this.checked)"> Building</label>
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.room ? 'checked' : ''} onchange="toggleColumn('room', this.checked)"> Room</label>
+        <label class="flex items-center gap-x-3 cursor-pointer"><input type="checkbox" ${visibleColumns.category ? 'checked' : ''} onchange="toggleColumn('category', this.checked)"> Category</label>
+    `;
+    const modal = document.getElementById('columnModal');
+    modal.showModal();
+    makeDraggable('columnModal', 'columnModalHeader');
+}
+function hideColumnModal() {
+    document.getElementById('columnModal').close();
+    filterAndRenderTable();
+}
+function toggleColumn(key, checked) {
+    visibleColumns[key] = checked;
+}
+function toggleAssetSelection(id, checked) {
+    if (checked) selectedAssets.add(id);
+    else selectedAssets.delete(id);
+    updateDeleteButton();
+}
+function toggleSelectAll() {
+    const allChecked = document.getElementById('selectAll').checked;
+    const checkboxes = document.querySelectorAll('#tableBody input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        const id = cb.parentElement.parentElement.querySelector('td.font-mono').textContent;
+        if (allChecked) selectedAssets.add(id);
+        else selectedAssets.delete(id);
+        cb.checked = allChecked;
+    });
+    updateDeleteButton();
+}
+function updateDeleteButton() {
+    document.getElementById('deleteBtn').disabled = selectedAssets.size === 0;
+}
+function deleteSelected() {
+    if (selectedAssets.size === 0 || !confirm(`Delete ${selectedAssets.size} selected assets?`)) return;
+    assets = assets.filter(a => !selectedAssets.has(a.id));
+    selectedAssets.clear();
+    saveData();
+    filterAndRenderTable();
+}
+function startBarcodeScan() {
+    const modal = document.getElementById('barcodeModal');
+    modal.showModal();
+    makeDraggable('barcodeModal', 'barcodeModalHeader');
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+    }
+    html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+            document.getElementById('assetId').value = decodedText;
+            hideBarcodeModal();
+            html5QrCode.stop();
+        },
+        (error) => {}
+    ).catch(err => {
+        console.log("Camera start error", err);
+    });
+}
+function hideBarcodeModal() {
+    const modal = document.getElementById('barcodeModal');
+    modal.close();
+    if (html5QrCode) {
+        html5QrCode.stop().catch(() => {});
+    }
+}
+function simulateBarcodeScan() {
+    const demoBarcode = 'AF-' + Math.floor(100000 + Math.random() * 900000);
+    document.getElementById('manualBarcodeInput').value = demoBarcode;
+    useManualBarcode();
+}
+function useManualBarcode() {
+    const value = document.getElementById('manualBarcodeInput').value.trim();
+    hideBarcodeModal();
+    if (value) document.getElementById('assetId').value = value;
+}
+function exportCSV() {
+    if (assets.length === 0) {
+        alert('No assets to export!');
+        return;
+    }
+    const headers = ['Asset ID','Status','Make','Model','Category','Serial','MAC 1','MAC 2','Site','Building','Room','Position','Note','Added By','Added On','Last Updated By','Last Updated On'];
+    const csvRows = [headers.join(',')];
+    assets.forEach(asset => {
+        const row = [
+            asset.id,
+            asset.status,
+            asset.make,
+            asset.model,
+            `"${asset.categories ? asset.categories.join(', ') : ''}"`,
+            asset.serial,
+            asset.mac1,
+            asset.mac2,
+            asset.site,
+            asset.building,
+            asset.room,
+            asset.position,
+            `"${asset.note || ''}"`,
+            asset.addedBy,
+            asset.addedOn,
+            asset.lastUpdatedBy,
+            asset.lastUpdatedOn
+        ];
+        csvRows.push(row.join(','));
+    });
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `av-technology-export-${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+function exportAllData() {
+    const data = {
+        assets: assets,
+        lookups: lookups,
+        currentUserIndex: currentUserIndex
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `av-technology-full-backup-${new Date().toISOString().slice(0,10)}.json`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+function triggerImport() {
+    document.getElementById('importFile').click();
+}
+function importAllData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const imported = JSON.parse(event.target.result);
+            if (imported.assets && imported.lookups) {
+                if (confirm('Import will wipe current data. Continue?')) {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+                    loadData();
+                    hideSetupModal();
+                    filterAndRenderTable();
+                }
+            } else {
+                alert('Invalid backup file');
+            }
+        } catch (err) {
+            alert('Error reading file');
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+}
+function resetAllData() {
+    if (confirm('Reset all data to demo state? This cannot be undone.')) {
+        localStorage.removeItem(STORAGE_KEY);
+        loadData();
+        hideSetupModal();
+        filterAndRenderTable();
+    }
+}
+function showUserDetailsModal() {
+    const modal = document.getElementById('userDetailsModal');
+    const currentUserObj = lookups.users[currentUserIndex];
+    document.getElementById('viewName').textContent = currentUserObj.name;
+    document.getElementById('viewJobTitle').textContent = currentUserObj.jobTitle || '';
+    document.getElementById('viewSite').textContent = currentUserObj.site || '';
+    document.getElementById('viewBuilding').textContent = currentUserObj.building || '';
+    document.getElementById('viewRoom').textContent = currentUserObj.room || '';
+    document.getElementById('userViewMode').classList.remove('hidden');
+    document.getElementById('userEditMode').classList.add('hidden');
+    const deleteBtn = document.getElementById('deleteUserBtn');
+    if (lookups.users.length > 1) {
+        deleteBtn.classList.remove('hidden');
+    } else {
+        deleteBtn.classList.add('hidden');
+    }
+    const dropdown = document.getElementById('userSwitchDropdown');
+    const otherUsers = lookups.users.filter((u, i) => i !== currentUserIndex && u && u.name);
+    dropdown.innerHTML = `<option value="">Select user...</option>` + otherUsers.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+    modal.showModal();
+    makeDraggable('userDetailsModal', 'userDetailsHeader');
+}
+function hideUserDetailsModal() {
+    document.getElementById('userDetailsModal').close();
+}
+function enterEditMode() {
+    const currentUserObj = lookups.users[currentUserIndex];
+    document.getElementById('currentUserEditName').value = currentUserObj.name;
+    document.getElementById('currentUserJobTitle').value = currentUserObj.jobTitle || '';
+    populateSelect('currentUserSite', lookups.sites);
+    document.getElementById('currentUserSite').value = currentUserObj.site || '';
+    updateUserDependentFields();
+    document.getElementById('currentUserBuilding').value = currentUserObj.building || '';
+    document.getElementById('currentUserRoom').value = currentUserObj.room || '';
+    document.getElementById('userViewMode').classList.add('hidden');
+    document.getElementById('userEditMode').classList.remove('hidden');
+}
+function exitEditMode() {
+    document.getElementById('userViewMode').classList.remove('hidden');
+    document.getElementById('userEditMode').classList.add('hidden');
+}
+function updateUserDependentFields() {
+    const site = document.getElementById('currentUserSite').value;
+    const buildingSelect = document.getElementById('currentUserBuilding');
+    const currentBuilding = buildingSelect.value;
+    buildingSelect.innerHTML = '';
+    const filteredBuildings = lookups.buildings.filter(b => b.site === site);
+    filteredBuildings.forEach(b => {
+        const option = document.createElement('option');
+        option.value = b.name;
+        option.textContent = b.name;
+        buildingSelect.appendChild(option);
+    });
+    if (filteredBuildings.some(b => b.name === currentBuilding)) buildingSelect.value = currentBuilding;
+    const building = document.getElementById('currentUserBuilding').value;
+    const roomSelect = document.getElementById('currentUserRoom');
+    const currentRoom = roomSelect.value;
+    roomSelect.innerHTML = '';
+    const filteredRooms = lookups.rooms.filter(r => r.building === building);
+    filteredRooms.forEach(r => {
+        const option = document.createElement('option');
+        option.value = r.name;
+        option.textContent = r.name;
+        roomSelect.appendChild(option);
+    });
+    if (filteredRooms.some(r => r.name === currentRoom)) roomSelect.value = currentRoom;
+}
+function saveCurrentUserDetails() {
+    const currentUserObj = lookups.users[currentUserIndex];
+    currentUserObj.name = document.getElementById('currentUserEditName').value.trim();
+    currentUserObj.jobTitle = document.getElementById('currentUserJobTitle').value.trim();
+    currentUserObj.site = document.getElementById('currentUserSite').value;
+    currentUserObj.building = document.getElementById('currentUserBuilding').value;
+    currentUserObj.room = document.getElementById('currentUserRoom').value;
+    saveData();
+    updateCurrentUserDisplay();
+    exitEditMode();
+}
+function deleteCurrentUser() {
+    if (lookups.users.length <= 1) return;
+    if (confirm('Delete this user?')) {
+        lookups.users.splice(currentUserIndex, 1);
+        currentUserIndex = Math.max(0, currentUserIndex - 1);
+        saveData();
+        hideUserDetailsModal();
+        updateCurrentUserDisplay();
+    }
+}
+function switchUserFromDropdown() {
+    const dropdown = document.getElementById('userSwitchDropdown');
+    const selectedName = dropdown.value;
+    if (!selectedName) return;
+    const newIndex = lookups.users.findIndex(u => u.name === selectedName);
+    if (newIndex !== -1) {
+        currentUserIndex = newIndex;
+        saveData();
+        updateCurrentUserDisplay();
+        hideUserDetailsModal();
+    }
+}
+function showAddNewUserForm() {
+    hideUserDetailsModal();
+    const modal = document.getElementById('addNewUserModal');
+    populateSelect('newUserSite', lookups.sites);
+    document.getElementById('newUserSite').value = lookups.sites[0] || '';
+    updateNewUserDependentFields();
+    modal.showModal();
+    makeDraggable('addNewUserModal', 'addNewUserHeader');
+}
+function hideAddNewUserModal() {
+    document.getElementById('addNewUserModal').close();
+}
+function updateNewUserDependentFields() {
+    const site = document.getElementById('newUserSite').value;
+    const buildingSelect = document.getElementById('newUserBuilding');
+    buildingSelect.innerHTML = '';
+    const filteredBuildings = lookups.buildings.filter(b => b.site === site);
+    filteredBuildings.forEach(b => {
+        const option = document.createElement('option');
+        option.value = b.name;
+        option.textContent = b.name;
+        buildingSelect.appendChild(option);
+    });
+    const building = document.getElementById('newUserBuilding').value;
+    const roomSelect = document.getElementById('newUserRoom');
+    roomSelect.innerHTML = '';
+    const filteredRooms = lookups.rooms.filter(r => r.building === building);
+    filteredRooms.forEach(r => {
+        const option = document.createElement('option');
+        option.value = r.name;
+        option.textContent = r.name;
+        roomSelect.appendChild(option);
+    });
+}
+function saveNewUser() {
+    const newUser = {
+        name: document.getElementById('newUserName').value.trim(),
+        jobTitle: document.getElementById('newUserJobTitle').value.trim(),
+        site: document.getElementById('newUserSite').value,
+        building: document.getElementById('newUserBuilding').value,
+        room: document.getElementById('newUserRoom').value
+    };
+    if (newUser.name) {
+        lookups.users.push(newUser);
+        saveData();
+        hideAddNewUserModal();
+        showUserDetailsModal();
+    }
+}
+function toggleDarkMode() {
+    isDarkMode = !isDarkMode;
+    if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+        document.getElementById('themeIcon').classList.remove('fa-moon');
+        document.getElementById('themeIcon').classList.add('fa-sun');
+    } else {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('themeIcon').classList.remove('fa-sun');
+        document.getElementById('themeIcon').classList.add('fa-moon');
+    }
+}
+function bootstrap() {
+    loadData();
+    renderHeader();
+    filterAndRenderTable();
+    document.addEventListener('keydown', e => {
+        if (e.metaKey && e.key === 'k') {
+            e.preventDefault();
+            document.getElementById('searchInput').focus();
+        }
+    });
+}
+window.onload = bootstrap;
+    </script>
+</body>
+</html>
